@@ -7,39 +7,27 @@ import { API } from "../utils/helpers";
 
 export default function CreatorsSection() {
   const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const [screenWidth, setScreenWidth] = useState(0);
+
+  useEffect(() => {
+    const handleResize = () => setScreenWidth(window.innerWidth);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   interface Creator {
     id: number;
     creatorImage: string;
     creatorName: string;
     imageUrl?: string;
-
     size?: number;
     link?: string;
     userName?: string;
   }
 
   const controls = useAnimation();
-
   const [creatorData, setCreatorData] = useState<Creator[]>([]);
-
-  // const getCreater = async () => {
-  //   try {
-  //     const res = await axios.get(
-  //       `${process.env.NEXT_PUBLIC_API}/getCreatorsAdmin`
-  //     );
-
-  //     if (res.status === 200 && Array.isArray(res?.data?.processedCreators)) {
-  //       setCreatorData(res?.data?.processedCreators);
-  //       console.log(res?.data?.processedCreators, "creators");
-  //     } else {
-  //       console.warn("Unexpected data format", res?.data?.processedCreators);
-  //       setCreatorData([]); // fallback to empty array
-  //     }
-  //   } catch (e) {
-  //     console.error("Fetch error:", e);
-  //     setCreatorData([]); // fallback to empty array
-  //   }
-  // };
 
   useEffect(() => {
     const getCreater = async () => {
@@ -52,81 +40,54 @@ export default function CreatorsSection() {
               city: city,
             },
           });
-
           setCreatorData(res.data || []);
         } catch (error) {
           console.error("Error fetching creators:", error);
         }
       }
     };
-
     getCreater();
   }, []);
-  const creator = [
-    {
-      id: 1,
-      name: creatorData[0]?.userName,
-      image: creatorData[0]?.creatorImage,
-      size: 100,
-      height: 100,
-      width: 100,
-      position: { desktop: { top: "25px", left: "12%" } }, // Adjust these values
-    },
-    {
-      id: 2,
-      name: creatorData[1]?.userName,
-      image: creatorData[1]?.creatorImage,
-      size: 150,
-      height: 150,
-      width: 150,
-      position: { desktop: { top: "130px", left: "22%" } },
-    },
-    {
-      id: 3,
-      name: creatorData[2]?.userName,
-      image: creatorData[2]?.creatorImage,
-      size: 115,
-      height: 115,
-      width: 115,
-      position: { desktop: { top: "15px", left: "33%" } },
-    },
-    {
-      id: 4,
-      name: creatorData[3]?.userName,
-      image: creatorData[3]?.creatorImage,
-      size: 135,
-      height: 135,
-      width: 135,
-      position: { desktop: { top: "80px", left: "43%" } },
-    },
-    {
-      id: 5,
-      name: creatorData[4]?.userName,
-      image: creatorData[4]?.creatorImage,
-      size: 145,
-      height: 145,
-      width: 145,
-      position: { desktop: { top: "20px", left: "55%" } },
-    },
-    {
-      id: 6,
-      name: creatorData[5]?.userName,
-      image: creatorData[5]?.creatorImage,
-      size: 130,
-      height: 130,
-      width: 130,
-      position: { desktop: { top: "145px", left: "65%" } },
-    },
-    {
-      id: 7,
-      name: creatorData[6]?.userName,
-      image: creatorData[6]?.creatorImage,
-      size: 120,
-      height: 120,
-      width: 120,
-      position: { desktop: { top: "25px", left: "75%" } },
-    },
+
+  const defaultPositions = [
+    { top: "25px", left: "12%" },
+    { top: "130px", left: "22%" },
+    { top: "15px", left: "33%" },
+    { top: "80px", left: "43%" },
+    { top: "20px", left: "55%" },
+    { top: "145px", left: "65.5%" },
+    { top: "25px", left: "76%" },
   ];
+
+  const customPositions1200to1536 = [
+    { top: "35px", left: "14%" },
+    { top: "140px", left: "26%" },
+    { top: "16px", left: "39.5%" },
+    { top: "85px", left: "52%" },
+    { top: "18px", left: "65.5%" },
+    { top: "155px", left: "78%" },
+    { top: "28px", left: "90.5%" },
+  ];
+
+  const creator = creatorData.slice(0, 7).map((data, index) => {
+    const position =
+      screenWidth >= 1200 && screenWidth < 1536
+        ? customPositions1200to1536[index]
+        : defaultPositions[index];
+
+    const sizeMap = [100, 150, 115, 135, 145, 130, 120];
+    const size = sizeMap[index];
+
+    return {
+      id: data?.id ?? index,
+      name: data?.userName,
+      image: data?.creatorImage,
+      size,
+      height: size,
+      width: size,
+      position: { desktop: position },
+    };
+  });
 
   useEffect(() => {
     controls.start({
@@ -143,17 +104,16 @@ export default function CreatorsSection() {
   return (
     <>
       {creatorData?.length > 0 && (
-        <section className="container mx-auto  my-6 relative pp:space-y-12 space-y-6">
-          <h2 className="text-3xl font-bold  mb-16 text-center">
+        <section className="container mx-auto my-6 relative pp:space-y-12 space-y-6">
+          <h2 className="text-3xl font-bold mb-16 text-center">
             Top Creators in Kanpur
           </h2>
-          <div className="w-full">
-            {/* Desktop Layout */}
-            <div className="hidden xl:block relative h-[300px]">
-              {/* Custom curved connecting line */}
 
+          {/* Desktop Layout */}
+          <div className="w-full">
+            <div className="hidden xl:block relative h-[300px]">
               <svg
-                className="absolute w-full  flex justify-center items-center -top-0 h-full"
+                className="absolute w-full flex justify-center items-center -top-0 h-full"
                 height="299"
                 fill="none"
                 viewBox="0 0  299"
@@ -167,18 +127,18 @@ export default function CreatorsSection() {
                 />
               </svg>
 
-              <div className="relative  h-full">
-                {creator.map((creator, id) => (
+              <div className="relative h-full">
+                {creator.map((creator) => (
                   <motion.div
-                    key={id}
+                    key={creator.id}
                     className="absolute flex flex-col items-center group"
                     style={{
                       ...creator?.position?.desktop,
                       width: `${creator?.width}px`,
                       height: `${creator?.height}px`,
                     }}
-                    onHoverStart={() => setHoveredId(creator?.id)}
-                    onHoverEnd={() => setHoveredId(null)}
+                    onMouseEnter={() => setHoveredId(creator.id)}
+                    onMouseLeave={() => setHoveredId(null)}
                   >
                     <div className="relative transition-transform duration-300 group-hover:scale-105">
                       <div className="relative overflow-hidden rounded-full">
@@ -189,12 +149,9 @@ export default function CreatorsSection() {
                           height={creator?.height}
                           className="rounded-full object-cover border-4 border-white shadow-xl hover:shadow-2xl transition-all group-hover:blur-sm"
                         />
-                        {hoveredId === creator?.id && (
+                        {hoveredId === creator.id && (
                           <motion.button
-                            className="absolute left-1/2 bottom-4 -translate-x-1/2
-                  px-4 py-2  text-white
-                  rounded-full text-sm z-10
-                  transition-colors"
+                            className="absolute left-1/2 bottom-4 -translate-x-1/2 px-4 py-2 text-white  rounded-full text-sm z-10"
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
                           >
@@ -217,9 +174,7 @@ export default function CreatorsSection() {
             <div className="xl:hidden overflow-hidden relative h-[140px]">
               <motion.div
                 className="flex gap-6 absolute left-0"
-                animate={{
-                  x: ["0%", "-50%"],
-                }}
+                animate={{ x: ["0%", "-50%"] }}
                 transition={{
                   duration: 15,
                   ease: "linear",
@@ -227,7 +182,7 @@ export default function CreatorsSection() {
                   repeatType: "loop",
                 }}
                 style={{
-                  width: `${creator.length * 2 * 110}px`, // 110 = 90px image + 20px spacing
+                  width: `${creator.length * 2 * 110}px`,
                 }}
               >
                 {[...creator, ...creator].map((creator, index) => (

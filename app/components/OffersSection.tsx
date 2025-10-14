@@ -932,15 +932,6 @@
 //   );
 // };
 
-"use client";
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-
-import { FiClock, FiNavigation, FiGlobe, FiArrowRight } from "react-icons/fi";
-// import { FaRegStar, FaStar, FaStarHalfAlt } from "react-icons/fa";
-import { MdStorefront } from "react-icons/md";
-import axios from "axios";
-
 // RatingStars component with better accessibility
 // const RatingStars = ({ rating }: { rating: number }) => {
 //   const fullStars = Math.floor(rating);
@@ -973,37 +964,6 @@ import axios from "axios";
 //     </div>
 //   );
 // };
-
-type Offer = {
-  id: number;
-  title: string;
-  storeName: string;
-  category: string;
-  discount: string;
-  description: string;
-  endDate: string;
-  rating: number;
-  distance: string;
-  image: string;
-  isOnline: boolean;
-  website?: string;
-  address?: string;
-  type: "trending" | "flash";
-  highlight?: string;
-  offerName?: string;
-  storeId?: {
-    storeName?: string;
-    userName?: string;
-    location?: {
-      city?: string;
-    };
-  };
-  offerCategory?: string;
-  url?: string;
-  offerDiscount?: string;
-  offerEndDate?: string;
-  offerDescription?: string;
-};
 
 // const demoOffers: Offer[] = [
 //   // Trending Offers (Banner Style)
@@ -1137,6 +1097,48 @@ type Offer = {
 //   },
 // ];
 
+"use client";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+
+import { FiClock, FiNavigation, FiGlobe, FiArrowRight } from "react-icons/fi";
+// import { FaRegStar, FaStar, FaStarHalfAlt } from "react-icons/fa";
+import { MdStorefront } from "react-icons/md";
+import axios from "axios";
+
+type Offer = {
+  id: number;
+  title: string;
+  storeName: string;
+  category: string;
+  discount: string;
+  description: string;
+  endDate: string;
+  rating: number;
+  distance: string;
+  image: string;
+  isOnline: boolean;
+  website?: string;
+  address?: string;
+  type: "trending" | "flash";
+  highlight?: string;
+  offerName?: string;
+  storeId?: {
+    storeName?: string;
+    userName?: string;
+    location?: {
+      city?: string;
+    };
+    phone?: string;
+    gmaplink?: string;
+  };
+  offerCategory?: string;
+  url?: string;
+  offerDiscount?: string;
+  offerEndDate?: string;
+  offerDescription?: string;
+};
+
 export default function OffersSection() {
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
   const [trendingOffers, setTrendingOffers] = useState([]);
@@ -1206,23 +1208,23 @@ export default function OffersSection() {
                   onClick={() => setSelectedOffer(offer)}
                   aria-label={`View ${offer.offerName} offer`}
                 >
-                  <div className="relative h-48 md:h-64 w-full">
+                  <div className="relative h-48 md:h-52 w-full">
                     <img
                       src={offer.url}
                       alt={"apna city"}
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      className="object-cover transition-transform duration-300 group-hover:scale-105 h-full w-full"
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
 
-                    {offer.offerDescription && (
+                    {/* {offer.offerDescription && (
                       <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-2xl text-white text-xs px-3 py-1 rounded-full">
                         {offer.offerDescription}
                       </div>
-                    )}
+                    )} */}
 
                     <div className="absolute top-4 right-4 bg-white text-green-600 font-semibold px-3 py-1 rounded-lg text-sm shadow-md">
-                      {offer.offerDiscount}% Off
+                      {offer.offerDiscount}
                     </div>
                   </div>
 
@@ -1268,16 +1270,16 @@ export default function OffersSection() {
                   onClick={() => setSelectedOffer(flashoffer)}
                   aria-label={`View ${flashoffer.offerName} offer`}
                 >
-                  <div className="relative h-40 w-full">
+                  <div className="relative h-32 w-full">
                     <img
                       src={flashoffer.url}
                       alt="apna"
-                      className="h-[200px] object-cover transition-transform duration-300 group-hover:scale-105"
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
                     />
                     {flashoffer.offerDiscount && (
                       <div className="absolute top-2 right-2 bg-green-600 text-white text-xs font-medium px-2 py-1 rounded">
-                        {flashoffer.offerDiscount}% Off
+                        {flashoffer.offerDiscount}
                       </div>
                     )}
                     {/* {flashoffer.offerPrice && (
@@ -1285,8 +1287,6 @@ export default function OffersSection() {
                         {flashoffer.offerPrice}
                       </div>
                     )} */}
-
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                   </div>
 
                   <div className="p-4">
@@ -1358,11 +1358,11 @@ export default function OffersSection() {
                   <img
                     src={selectedOffer.url}
                     alt={selectedOffer.offerName}
-                    className="object-cover h-[200px]"
+                    className="object-cover h-full w-full"
                     sizes="100vw"
                   />
                   <div className="absolute top-3 right-3 bg-green-700 text-white text-sm font-bold px-3 py-1 rounded">
-                    {selectedOffer.offerDiscount}% Off
+                    {selectedOffer.offerDiscount}
                   </div>
                 </div>
 
@@ -1393,7 +1393,7 @@ export default function OffersSection() {
 
                     {/* <RatingStars rating={selectedOffer.rating} /> */}
                     <span className="text-xs font-medium bg-black text-white px-2 py-1 rounded">
-                      {selectedOffer.offerDescription}
+                      {selectedOffer?.storeId?.phone}
                     </span>
                   </div>
 
@@ -1469,7 +1469,8 @@ export default function OffersSection() {
                       <FiGlobe className="mr-2" /> Visit Website
                     </a>
                   ) : (
-                    <button
+                    <a
+                      href={selectedOffer?.storeId?.gmaplink}
                       onClick={() =>
                         selectedOffer.address &&
                         handleGetDirections(selectedOffer.address)
@@ -1478,7 +1479,7 @@ export default function OffersSection() {
                       aria-label="Get directions"
                     >
                       <FiNavigation className="mr-2" /> Get Directions
-                    </button>
+                    </a>
                   )}
                 </div>
               </motion.div>

@@ -25,60 +25,76 @@ interface User {
   // ... other user properties
 }
 
+const CoinIcon = () => (
+  <svg
+    width="27"
+    height="27"
+    viewBox="0 0 27 27"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="coin-icon"
+  >
+    <circle cx="12" cy="12" r="10" fill="#FBBF24" />
+    <circle cx="12" cy="12" r="8" fill="#F59E0B" />
+    <path
+      d="M12 4C16.4183 4 20 7.58172 20 12C20 16.4183 16.4183 20 12 20C7.58172 20 4 16.4183 4 12C4 7.58172 7.58172 4 12 4Z"
+      stroke="#D97706"
+      strokeWidth="1.5"
+    />
+    <path
+      d="M12 6C15.3137 6 18 8.68629 18 12C18 15.3137 15.3137 18 12 18C8.68629 18 6 15.3137 6 12C6 8.68629 8.68629 6 12 6Z"
+      stroke="#FCD34D"
+      strokeWidth="1.5"
+    />
+    <circle cx="12" cy="12" r="3" fill="#FDE68A" />
+    <path
+      d="M12 9C13.6569 9 15 10.3431 15 12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12C9 10.3431 10.3431 9 12 9Z"
+      stroke="#FBBF24"
+      strokeWidth="1.5"
+    />
+  </svg>
+);
+
 const LoginPopup = ({
   isOpen,
   onClose,
   isMobile,
+  guestUser,
+  coins,
 }: {
   isOpen: boolean;
   onClose: () => void;
   isMobile: boolean;
+  guestUser: string | null;
+  coins: number;
 }) => {
-  // const [isLoading, setIsLoading] = useState(true);
-  // const [error, setError] = useState(null);
-  // const [data, setData] = useState(null);
-  const [guestUser, setGuestUser] = useState<string | null>(null);
-
-  useEffect(() => {
-    setGuestUser(localStorage.getItem("guestUser"));
-  }, []);
-
   const guestCreation = async () => {
-    if (typeof window === "undefined") return; // Prevent server-side execution
+    if (typeof window === "undefined") return;
 
     try {
       const existingUser = localStorage.getItem("guestUser");
+      const user = localStorage.getItem("user");
+      if (user) return;
+      if (existingUser) return;
 
-      if (existingUser) {
-        console.log("Guest user already exists:", existingUser);
-        setGuestUser(existingUser);
-        return;
-      }
-
-      // Step 1: Get IP address
       const ipRes = await axios.get("https://api.ipify.org?format=json");
       const ipAddress = ipRes.data.ip;
 
-      // Step 2: Send to your backend
       const res = await axios.post(
         `http://localhost:5002/api/createGuestUser`,
         { IPAddress: ipAddress }
       );
-
       const newUser = res.data?.data?.userName;
 
       if (newUser) {
         localStorage.setItem("guestUser", newUser);
-        setGuestUser(newUser);
+        localStorage.setItem("id", res.data?.data?._id);
       }
     } catch (error) {
       console.error("Guest creation error:", error);
     }
   };
 
-  useEffect(() => {
-    guestCreation();
-  }, []);
   return (
     <AnimatePresence>
       {isOpen && (
@@ -97,43 +113,105 @@ const LoginPopup = ({
             exit={isMobile ? { y: "100%" } : { scale: 0.9, opacity: 0 }}
             className={`fixed ${
               isMobile
-                ? "bottom-0 left-0 right-0 rounded-2xl"
+                ? "bottom-0 left-0 right-0 rounded-t-3xl"
                 : "inset-0 m-auto max-w-md w-full h-fit rounded-2xl"
             } bg-white shadow-xl z-50 overflow-hidden`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-lg font-semibold">Welcome to Apna City</h2>
-              <button
-                onClick={onClose}
-                className="p-1 rounded-full hover:bg-gray-100"
-              >
-                <FiX className="w-5 h-5" />
-              </button>
-            </div>
-            {!guestUser ? (
-              <div className="p-4">
+            <div className="relative">
+              <div className="bg-red-600 h-2 w-full"></div>
+              <div className="flex items-center justify-between p-5 pb-3">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800">
+                    Welcome to Apna City
+                  </h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {guestUser
+                      ? `Logged in as ${guestUser}`
+                      : "Login or continue as guest"}
+                  </p>
+                </div>
                 <button
-                  onClick={() => {
-                    guestCreation();
-                    onClose();
-                  }}
-                  className="w-full py-3 px-4 bg-gray-100 rounded-lg text-gray-700  hover:bg-gray-200 transition-colors mb-4"
+                  onClick={onClose}
+                  className="p-2 rounded-full hover:bg-gray-100"
                 >
-                  Continue as Guest
+                  <FiX className="w-5 h-5 text-gray-500" />
                 </button>
+              </div>
+            </div>
 
-                <div className="text-center py-4 text-gray-500 text-sm">
-                  Other login options coming soon
+            <div className="p-5 pt-0 space-y-4">
+              {guestUser && (
+                <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-4 flex items-start gap-3">
+                  <div className="relative">
+                    <CoinIcon />
+                    <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center border-2 border-white font-bold">
+                      {coins > 999 ? `${Math.floor(coins / 1000)}k` : coins}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-800">
+                      You have {coins.toLocaleString()} coins!
+                    </h4>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Use them to get discounts on your bookings
+                    </p>
+                  </div>
                 </div>
+              )}
+
+              <div className="space-y-3">
+                <Link
+                  href="/bookings"
+                  className="block w-full py-3 px-4 bg-red-600 hover:bg-red-700 text-white text-center rounded-lg font-medium transition-colors"
+                >
+                  My Bookings
+                </Link>
+
+                {guestUser ? (
+                  <Link
+                    href="/Login"
+                    className="block w-full py-3 px-4 border border-gray-300 hover:bg-gray-50 text-gray-700 text-center rounded-lg font-medium transition-colors"
+                  >
+                    Login with other account
+                  </Link>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        guestCreation();
+                        onClose();
+                      }}
+                      className="w-full py-3 px-4 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition-colors"
+                    >
+                      Continue as Guest
+                    </button>
+                    <Link
+                      href="/Login"
+                      className="block w-full py-3 px-4 bg-gray-800 hover:bg-gray-900 text-white text-center rounded-lg font-medium transition-colors"
+                    >
+                      Login / Sign Up
+                    </Link>
+                  </>
+                )}
               </div>
-            ) : (
-              <div className="p-4">
-                <div className="w-full py-3 px-4 bg-gray-100 rounded-lg text-gray-700 flex items-center justify-center hover:bg-gray-200 transition-colors mb-4">
-                  Hi, {guestUser}
-                </div>
+
+              <div className="pt-2 text-center">
+                <p className="text-xs text-gray-500">
+                  By continuing, you agree to our <br />
+                  <Link href="/terms" className="text-red-600 hover:underline">
+                    Terms of Service
+                  </Link>{" "}
+                  and{" "}
+                  <Link
+                    href="/privacy"
+                    className="text-red-600 hover:underline"
+                  >
+                    Privacy Policy
+                  </Link>
+                </p>
               </div>
-            )}
+            </div>
           </motion.div>
         </>
       )}
@@ -154,30 +232,33 @@ export default function Header() {
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [guestUser, setGuestUser] = useState<string | null>(null);
+  const [coins, setCoins] = useState(0);
+  const userId =
+    typeof window !== "undefined" ? localStorage.getItem("id") : null;
+
+  const getcoins = async () => {
+    try {
+      if (!userId) return;
+      const res = await axios.get(`${API}/getcoins/${userId}`);
+      setCoins(res?.data?.user?.coins || 0);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
   interface City {
     name: string;
     data: {
       city: string;
-      // add other properties if needed
     };
-    // add other properties if needed
   }
+
   const [cities, setCities] = useState<City[]>([]);
-  // const cities = [
-  //   { name: "Kanpur", available: true },
-  //   { name: "Delhi", available: true },
-  //   { name: "Mumbai", available: false },
-  //   { name: "Bangalore", available: false },
-  //   { name: "Hyderabad", available: false },
-  //   { name: "Chennai", available: false },
-  //   { name: "Kolkata", available: false },
-  //   { name: "Pune", available: false },
-  // ];
+
   const getLocation = async () => {
     try {
       const res = await axios.get(`${API}/getLocations`);
-
-      setCities(res?.data?.locations);
+      setCities(res?.data?.locations || []);
     } catch (e) {
       console.log(e);
     }
@@ -185,16 +266,8 @@ export default function Header() {
 
   useEffect(() => {
     getLocation();
-  }, []);
-  const navItems = [
-    { name: "Home", href: "/", icon: <FiHome size={18} /> },
-    { name: "Offers", href: "/offers", icon: <FiTag size={18} /> },
-    { name: "Creators", href: "/creators", icon: <FiUsers size={18} /> },
-    { name: "Contact Us", href: "/ContactUs", icon: <FiPhone size={18} /> },
-    { name: "About Us", href: "/AboutUs", icon: <FiInfo size={18} /> },
-  ];
+    getcoins();
 
-  useEffect(() => {
     const checkIfMobile = () => setIsMobile(window.innerWidth < 768);
     checkIfMobile();
     window.addEventListener("resize", checkIfMobile);
@@ -202,13 +275,12 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
-    // Get guestUser from localStorage
-    const storedGuestUser = localStorage.getItem("guestUser");
-    if (storedGuestUser) {
-      setGuestUser(storedGuestUser);
-    }
+    if (typeof window === "undefined") return;
 
-    // Get selected city from localStorage
+    const storedGuestUser =
+      localStorage.getItem("guestUser") || localStorage.getItem("user");
+    if (storedGuestUser) setGuestUser(storedGuestUser);
+
     const savedCity = localStorage.getItem("selectedCity");
     if (savedCity) {
       setSelectedCity(savedCity);
@@ -217,9 +289,7 @@ export default function Header() {
       setShowCityPopup(true);
     }
 
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 100);
-    };
+    const handleScroll = () => setIsScrolled(window.scrollY > 100);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -246,13 +316,13 @@ export default function Header() {
 
           if (city) {
             const foundCity = cities.find(
-              (c) => c.name.toLowerCase() === city.toLowerCase()
+              (c) => c.data.city.toLowerCase() === city.toLowerCase()
             );
             if (foundCity) {
-              selectCity(foundCity.name);
+              selectCity(foundCity.data.city);
             } else {
               setLocationError(
-                `We&apos;ll soon come to ${city}! Currently only available in Kanpur.`
+                `We'll soon come to ${city}! Currently only available in Kanpur.`
               );
             }
           } else {
@@ -285,6 +355,7 @@ export default function Header() {
     setShowCityPopup(!showCityPopup);
     setLocationError(null);
   };
+
   const handleCityChange = () => {
     if (typeof window !== "undefined") {
       localStorage.removeItem("selectedCity");
@@ -294,6 +365,14 @@ export default function Header() {
   };
 
   const isKanpurSelected = selectedCity === "Kanpur";
+
+  const navItems = [
+    { name: "Home", href: "/", icon: <FiHome size={18} /> },
+    { name: "Offers", href: "/offers", icon: <FiTag size={18} /> },
+    { name: "Creators", href: "/creators", icon: <FiUsers size={18} /> },
+    { name: "Contact Us", href: "/ContactUs", icon: <FiPhone size={18} /> },
+    { name: "About Us", href: "/AboutUs", icon: <FiInfo size={18} /> },
+  ];
 
   return (
     <>
@@ -313,17 +392,63 @@ export default function Header() {
               </Link>
 
               <div className="hidden md:flex items-center space-x-4">
-                {/* <div className="relative w-[400px]">
-                  <input
-                    type="text"
-                    placeholder="Search for places, offers..."
-                    className="w-full px-4 py-2 border border-gray-200 rounded-full focus:outline-none focus:ring-1 focus:ring-red-500 text-sm"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  <FiSearch className="absolute right-3 top-2.5 text-gray-400" />
-                </div> */}
+                <div className="relative group">
+                  <button className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-full font-sans shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 hover:from-yellow-300 hover:to-yellow-400 active:scale-95">
+                    <div className="relative">
+                      <CoinIcon />
+                      <div className="absolute -top-2 -right-2 bg-green-500/80 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center border-2 border-white">
+                        {coins > 999 ? `${Math.floor(coins / 1000)}k` : coins}
+                      </div>
+                    </div>
+                    <span className="font">Apna Coins</span>
+                  </button>
 
+                  <div className="absolute right-0 top-full mt-2 w-72 bg-white shadow-xl rounded-xl p-4 hidden group-hover:block z-50 border border-gray-200 animate-fade-in">
+                    <div className="flex items-start gap-4">
+                      <div className="relative">
+                        <CoinIcon />
+                        <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center border-2 border-white font-bold">
+                          {coins > 999 ? `${Math.floor(coins / 1000)}k` : coins}
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-800 text-lg">
+                          Apna City Coins
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1 ">
+                          You have
+                          <span className="font-bold text-green-600 px-1">
+                            {coins.toLocaleString()}
+                          </span>
+                          coins
+                        </p>
+                        <div className="mt-3 bg-yellow-50 p-2 rounded-lg">
+                          <p className="text-xs text-yellow-800">
+                            Use coins to unlock exclusive discounts and rewards!
+                          </p>
+                        </div>
+                        <Link
+                          href="/offers"
+                          className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-red-600 hover:text-red-700 transition-colors"
+                        >
+                          View available offers
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M5 12h14M12 5l7 7-7 7" />
+                          </svg>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <div className="relative">
                   <button
                     onClick={toggleCityPopup}
@@ -338,28 +463,17 @@ export default function Header() {
                     />
                   </button>
                 </div>
-
-                {user || guestUser ? (
-                  <button
-                    onClick={() => setShowLoginPopup(true)}
-                    className="flex items-center space-x-1 text-gray-600 hover:text-red-600 text-sm"
-                  >
-                    <FiUser className="w-4 h-4" />
-                    {user ? (
-                      <span>{user.name.split(" ")[0]}</span>
-                    ) : (
-                      <span>{guestUser}</span>
-                    )}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setShowLoginPopup(true)}
-                    className="flex items-center space-x-1 text-gray-600 hover:text-red-600 text-sm"
-                  >
-                    <FiUser className="w-4 h-4" />
-                    <span>Login</span>
-                  </button>
-                )}
+                <button
+                  onClick={() => setShowLoginPopup(true)}
+                  className="flex items-center space-x-1 text-gray-600 hover:text-red-600 text-sm"
+                >
+                  <FiUser className="w-4 h-4" />
+                  {user ? (
+                    <span>{user.name.split(" ")[0]}</span>
+                  ) : (
+                    <span>{guestUser || "Login"}</span>
+                  )}
+                </button>
               </div>
 
               <div className="md:hidden flex items-center space-x-4">
@@ -411,7 +525,6 @@ export default function Header() {
           </div>
         </div>
 
-        {/* {isKanpurSelected && ( */}
         <div className="border-b border-gray-100 overflow-x-auto no-scrollbar">
           <div className="container mx-auto px-2">
             <nav className="flex items-center space-x-2 py-3 whitespace-nowrap">
@@ -443,7 +556,6 @@ export default function Header() {
             </nav>
           </div>
         </div>
-        {/* )} */}
 
         <AnimatePresence>
           {showCityPopup && (
@@ -479,35 +591,15 @@ export default function Header() {
                 <p className="text-xs text-gray-500 uppercase tracking-wider">
                   Available Cities
                 </p>
-                {cities
-                  // .filter((c) => c.available)
-                  .map((city, i) => (
-                    <button
-                      key={i}
-                      onClick={() => selectCity(city.data.city)}
-                      className="w-full text-left px-4 py-2 hover:bg-red-50 text-sm rounded-md flex justify-between items-center"
-                    >
-                      {city.data.city}
-                    </button>
-                  ))}
-
-                {/* <p className="text-xs text-gray-500 uppercase tracking-wider mt-3">
-                  Coming Soon
-                </p>
-                {cities
-                  .filter((c) => !c.available)
-                  .map((city) => (
-                    <button
-                      key={city.name}
-                      disabled
-                      className="w-full text-left px-4 py-2 text-sm rounded-md flex justify-between items-center opacity-60 cursor-not-allowed"
-                    >
-                      {city.name}
-                      <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
-                        Soon
-                      </span>
-                    </button>
-                  ))} */}
+                {cities.map((city, i) => (
+                  <button
+                    key={i}
+                    onClick={() => selectCity(city.data.city)}
+                    className="w-full text-left px-4 py-2 hover:bg-red-50 text-sm rounded-md flex justify-between items-center"
+                  >
+                    {city.data.city}
+                  </button>
+                ))}
               </div>
             </motion.div>
           )}
@@ -518,6 +610,8 @@ export default function Header() {
         isOpen={showLoginPopup}
         onClose={() => setShowLoginPopup(false)}
         isMobile={isMobile}
+        guestUser={guestUser}
+        coins={coins}
       />
 
       {selectedCity && !isKanpurSelected && (
@@ -528,8 +622,8 @@ export default function Header() {
               Coming Soon to {selectedCity}!
             </h2>
             <p className="text-gray-600 mb-6">
-              We&apos;re currently only available in Kanpur. We&apos;ll be
-              expanding to your city soon!
+              We&apos;re currently only available in Kanpur. We&apos;ll be expanding to
+              your city soon!
             </p>
             <button
               onClick={handleCityChange}

@@ -1,14 +1,22 @@
 "use client";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiClock, FiMapPin, FiX, FiGlobe, FiNavigation } from "react-icons/fi";
-import { FaRegStar, FaStar, FaStarHalfAlt } from "react-icons/fa";
+import {
+  FiClock,
+  FiMapPin,
+  FiX,
+  FiGlobe,
+  FiNavigation,
+  FiShoppingCart,
+} from "react-icons/fi";
+import {  FaStore } from "react-icons/fa";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { MdStorefront } from "react-icons/md";
 import { API } from "../utils/helpers";
-// import loadingAnimation from "../Asset/loading.json";
+import toast, { Toaster } from "react-hot-toast";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 type Offer = {
   _id: string;
@@ -34,37 +42,43 @@ type Offer = {
   offerEndDate?: string;
 };
 
-const RatingStars = ({ rating }: { rating: number }) => {
-  const fullStars = Math.floor(rating);
-  const hasHalfStar = rating % 1 >= 0.5;
-  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+// const RatingStars = ({ rating }: { rating: number }) => {
+//   const fullStars = Math.floor(rating);
+//   const hasHalfStar = rating % 1 >= 0.5;
+//   const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
 
-  return (
-    <div className="flex items-center">
-      {[...Array(fullStars)].map((_, i) => (
-        <FaStar key={`full-${i}`} className="text-yellow-400 text-sm" />
-      ))}
-      {hasHalfStar && <FaStarHalfAlt className="text-yellow-400 text-sm" />}
-      {[...Array(emptyStars)].map((_, i) => (
-        <FaRegStar key={`empty-${i}`} className="text-yellow-400 text-sm" />
-      ))}
-      <span className="ml-1 text-gray-700 text-sm">{rating.toFixed(1)}</span>
-    </div>
-  );
-};
+//   return (
+//     <div className="flex items-center">
+//       {[...Array(fullStars)].map((_, i) => (
+//         <FaStar key={`full-${i}`} className="text-yellow-400 text-sm" />
+//       ))}
+//       {hasHalfStar && <FaStarHalfAlt className="text-yellow-400 text-sm" />}
+//       {[...Array(emptyStars)].map((_, i) => (
+//         <FaRegStar key={`empty-${i}`} className="text-yellow-400 text-sm" />
+//       ))}
+//       <span className="ml-1 text-gray-700 text-sm">{rating.toFixed(1)}</span>
+//     </div>
+//   );
+// };
 
 export default function OffersPage() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
-  // const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [offerType, setOfferType] = useState<"all" | "online" | "offline">(
     "all"
   );
-
   const [pincode, setPincode] = useState("");
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [loadingButtons, setLoadingButtons] = useState<{
+    [key: string]: boolean;
+  }>({});
+  const [alreadyBooked, setAlreadyBooked] = useState<{
+    [key: string]: boolean;
+  }>({});
+  const router = useRouter();
 
   const categories = [
     "All",
@@ -77,21 +91,109 @@ export default function OffersPage() {
   ];
 
   useEffect(() => {
-    const city = localStorage.getItem("selectedCity");
+    // Client-side only code
+    if (typeof window !== "undefined") {
+      setUserId(localStorage.getItem("id"));
+      checkBookedOffers();
+    }
+  }, []);
+
+  const checkBookedOffers = useCallback(async () => {
+    if (!userId) return;
+
+    try {
+      const response = await axios.get(`${API}/getBookedOffers`, {
+        params: { userId },
+      });
+      const bookedOffers = response.data.bookedOffers || [];
+      const bookedStatus: { [key: string]: boolean } = {};
+      bookedOffers.forEach((offer: { offerId: string }) => {
+        bookedStatus[offer.offerId] = true;
+      });
+      setAlreadyBooked(bookedStatus);
+    } catch (err) {
+      console.error("Failed to fetch booked offers:", err);
+    }
+  }, [userId]);
+
+  const bookOffer = async (offerid: string) => {
+    if (!userId) {
+      toast.error("Please login to book offers");
+      return;
+    }
+
+    if (alreadyBooked[offerid]) {
+      toast(
+        (t) => (
+          <div className="flex flex-col items-center">
+            <span>You&apos;ve already booked this offer!</span>
+            <button
+              onClick={() => {
+                router.push("/bookings");
+                toast.dismiss(t.id);
+              }}
+              className="mt-2 px-4 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              View My Bookings
+            </button>
+          </div>
+        ),
+        { duration: 5000 }
+      );
+      return;
+    }
+
+    setLoadingButtons((prev) => ({ ...prev, [offerid]: true }));
+    // const reward = Math.floor(Math.random() * 50) + 1;
+
+    try {
+      // const response = await axios.post(`${API}/bookOffer`, {
+      //   userId: userId,
+      //   offerId: offerid,
+      //   quantity: 1,
+      //   coinsRewarded: reward,
+      // });
+      toast.success("Offer Booked Successfully!");
+      setAlreadyBooked((prev) => ({ ...prev, [offerid]: true }));
+
+      // Redirect to bookings page after 2 seconds
+      setTimeout(() => {
+        router.push("/bookings");
+      }, 2000);
+    } catch (err) {
+      console.error("Failed to book offer:", err);
+      if (
+        typeof err === "object"
+        // err !== null &&
+        // "" in err &&
+        // (err).response?.data?.message === "Offer already booked"
+      ) {
+        setAlreadyBooked((prev) => ({ ...prev, [offerid]: true }));
+        toast.error("You've already booked this offer!");
+      } else {
+        toast.error("Failed to book offer. Please try again.");
+      }
+    }
+    setLoadingButtons((prev) => ({ ...prev, [offerid]: false }));
+  };
+
+  useEffect(() => {
     const fetchOffers = async () => {
       try {
         setLoading(true);
+        const city =
+          typeof window !== "undefined"
+            ? localStorage.getItem("selectedCity")
+            : null;
         const response = await axios.get(`${API}/getOfferstypes`, {
           params: {
             type: offerType,
             city: city,
           },
         });
-
         setOffers(response.data.offers || []);
       } catch (err) {
         console.log(err);
-        // setError("Failed to load offers. Please try again later.");
         setOffers([
           {
             _id: "1",
@@ -143,8 +245,11 @@ export default function OffersPage() {
       offerType === "all" ||
       (offerType === "online" && offer.isOnline) ||
       (offerType === "offline" && !offer.isOnline);
-    const matchesPincode = !pincode || offer.distance.includes(pincode);
-    return matchesSearch && matchesCategory && matchesType && matchesPincode;
+    // Commenting out pincode filter as it's not fully implemented
+    // const matchesPincode = !pincode || (offer.distance && offer.distance.includes(pincode));
+    return (
+      matchesSearch && matchesCategory && matchesType /* && matchesPincode */
+    );
   });
 
   const resetFilters = () => {
@@ -164,156 +269,170 @@ export default function OffersPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
+      <Toaster position="top-center" />
 
-      {/* Header Section */}
-      <div className="relative md:py-20 py-10 overflow-hidden select-none">
-        <div className="relative max-w-7xl mx-auto px-4 text-center">
+      {/* Hero Section */}
+      <div className="relative bg-[#f1f1f1] py-16 text-black">
+        <div className="container mx-auto px-4 text-center">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-3xl sm:text-5xl lg:text-6xl font-extrabold leading-tight text-gray-900"
+            className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-4"
           >
-            Local <span className="text-red-600">Deals & Offers</span>
+            Discover Amazing <span className="text-red-600">Local Offers</span>
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="mt-6 text-[18px] sm:text-xl max-w-2xl mx-auto text-gray-600"
+            className="text-xl max-w-2xl mx-auto mb-8"
           >
-            Discover exclusive discounts from businesses near you
+            Exclusive discounts from businesses in your area
           </motion.p>
-          {/* Optional CTA Button (commented out) */}
-          {/* <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 0.2 }}
-      className="mt-6"
-    >
-      <button className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-lg font-medium text-lg transition transform hover:scale-105 shadow-lg focus:outline-none focus:ring-4 focus:ring-red-200">
-        See All Offers
-      </button>
-    </motion.div> */}
         </div>
       </div>
 
       {/* Filters Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 select-none">
-        <div className="flex flex-col gap-4 mb-6">
-          {/* Offer Type Tabs */}
-          <div className="flex border-b border-gray-200">
-            <button
-              onClick={() => setOfferType("all")}
-              className={`px-4 py-2 font-medium text-sm ${
-                offerType === "all"
-                  ? "border-b-2 border-red-500 text-red-600"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              All Offers
-            </button>
-            <button
-              onClick={() => setOfferType("online")}
-              className={`px-4 py-2 font-medium text-sm flex items-center ${
-                offerType === "online"
-                  ? "border-b-2 border-red-500 text-red-600"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              <FiGlobe className="mr-2" /> Online Offers
-            </button>
-            <button
-              onClick={() => setOfferType("offline")}
-              className={`px-4 py-2 font-medium text-sm flex items-center ${
-                offerType === "offline"
-                  ? "border-b-2 border-red-500 text-red-600"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              <FiMapPin className="mr-2" /> Nearby Offline
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search offers..."
-                className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              {searchTerm && (
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10">
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="flex flex-col gap-4">
+            {/* Offer Type Tabs */}
+            <div className="flex overflow-x-auto pb-2">
+              <div className="flex space-x-1 rounded-lg bg-gray-100 p-1">
                 <button
-                  onClick={() => setSearchTerm("")}
-                  className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+                  onClick={() => setOfferType("all")}
+                  className={`px-4 py-2 text-sm font-medium rounded-md whitespace-nowrap ${
+                    offerType === "all"
+                      ? "bg-white shadow text-red-600"
+                      : "text-gray-600 hover:text-gray-700"
+                  }`}
                 >
-                  <FiX size={18} />
+                  All Offers
                 </button>
-              )}
+                <button
+                  onClick={() => setOfferType("online")}
+                  className={`px-4 py-2 text-sm font-medium rounded-md whitespace-nowrap flex items-center ${
+                    offerType === "online"
+                      ? "bg-white shadow text-red-600"
+                      : "text-gray-600 hover:text-gray-700"
+                  }`}
+                >
+                  <FiGlobe className="mr-2" /> Online
+                </button>
+                <button
+                  onClick={() => setOfferType("offline")}
+                  className={`px-4 py-2 text-sm font-medium rounded-md whitespace-nowrap flex items-center ${
+                    offerType === "offline"
+                      ? "bg-white shadow text-red-600"
+                      : "text-gray-600 hover:text-gray-700"
+                  }`}
+                >
+                  <FiMapPin className="mr-2" /> Nearby
+                </button>
+              </div>
             </div>
 
-            <select
-              className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-            >
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg
+                    className="w-5 h-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    ></path>
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search offers..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
 
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Enter pincode"
-                className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                value={pincode}
-                onChange={(e) => setPincode(e.target.value)}
-                maxLength={6}
-              />
-              {pincode && (
-                <button
-                  onClick={() => setPincode("")}
-                  className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
-                >
-                  <FiX size={18} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {(searchTerm ||
-            selectedCategory !== "All" ||
-            offerType !== "all" ||
-            pincode) && (
-            <div className="flex justify-end">
-              <button
-                onClick={resetFilters}
-                className="text-red-600 hover:text-red-800 text-sm font-medium"
+              <select
+                className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white"
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
               >
-                Reset all filters
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiMapPin className="text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Pincode filter (coming soon)"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-gray-100 cursor-not-allowed"
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value)}
+                  maxLength={6}
+                  disabled
+                />
+              </div>
+            </div>
+
+            {(searchTerm ||
+              selectedCategory !== "All" ||
+              offerType !== "all" ||
+              pincode) && (
+              <div className="flex justify-end">
+                <button
+                  onClick={resetFilters}
+                  className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center"
+                >
+                  <FiX className="mr-1" /> Reset filters
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Results Section */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6 flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-gray-800">
+            {filteredOffers.length > 0 ? (
+              <>
+                {filteredOffers.length} {offerType !== "all" ? offerType : ""}{" "}
+                Offers
+                {pincode && ` near ${pincode}`}
+              </>
+            ) : (
+              "No offers found"
+            )}
+          </h2>
+          {filteredOffers.length > 0 && (
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-500">
+                Showing {filteredOffers.length} of {offers.length}
+              </span>
+              <button
+                onClick={() => router.push("/bookings")}
+                className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm hover:bg-gray-900 transition-colors"
+              >
+                View My Bookings
               </button>
             </div>
           )}
         </div>
 
-        {/* Results Count */}
-        <div className="mb-4 text-sm text-gray-600">
-          {filteredOffers.length > 0
-            ? `Showing ${filteredOffers.length} ${
-                offerType !== "all" ? offerType : ""
-              } offers`
-            : "No offers match your criteria"}
-          {pincode && ` near ${pincode}`}
-        </div>
-      </div>
-
-      {/* Offers Grid */}
-      <div className="py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto cursor-pointer select-none">
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
@@ -332,30 +451,29 @@ export default function OffersPage() {
               </div>
             ))}
           </div>
-        ) : filteredOffers?.length === 0 ? (
+        ) : filteredOffers.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {filteredOffers.length === 0
-                ? "No offers available today"
-                : "No offers match your filters"}
+            <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <FiShoppingCart className="text-gray-400 text-3xl" />
+            </div>
+            <h3 className="text-xl font-medium text-gray-900 mb-2">
+              No offers available
             </h3>
-            <p className="text-gray-500 mb-4">
-              {filteredOffers?.length === 0
-                ? "Check back later for new offers from local businesses."
-                : "Try adjusting your search criteria or reset filters."}
+            <p className="text-gray-500 mb-6">
+              {searchTerm || selectedCategory !== "All" || pincode
+                ? "Try adjusting your search filters"
+                : "Check back later for new offers"}
             </p>
-            {filteredOffers?.length > 0 && (
-              <button
-                onClick={resetFilters}
-                className="text-red-600 hover:text-red-800 font-medium px-4 py-2 rounded-lg border border-red-200 hover:bg-red-50"
-              >
-                Reset all filters
-              </button>
-            )}
+            <button
+              onClick={resetFilters}
+              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Reset Filters
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredOffers?.map((offer) => (
+            {filteredOffers.map((offer: Offer) => (
               <motion.div
                 key={offer._id}
                 initial={{ opacity: 0, y: 20 }}
@@ -364,104 +482,107 @@ export default function OffersPage() {
                 whileHover={{ y: -5 }}
                 className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-200"
               >
-                <div className="relative h-60 w-full">
-                  <img
+                <div
+                  onClick={() => setSelectedOffer(offer)}
+                  className="relative h-52 w-full cursor-pointer"
+                >
+                  <Image
                     src={offer?.url || "/placeholder.jpg"}
-                    alt={offer?.offerName}
-                    // fill
-                    className="object-cover h-[200px]"
+                    alt={offer?.offerName || "Offer image"}
+                    fill
+                    className="object-cover"
                     sizes="(max-width: 768px) 100vw, 50vw"
+                    unoptimized={true}
                   />
-                  <div className="absolute top-3 right-3 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
-                    {offer.offerDiscount}% Off
+                  <div className="absolute top-3 right-3 bg-red-600 text-white text-sm font-bold px-3 py-1 rounded-full shadow-md">
+                    {offer.offerDiscount || "Offer"}
                   </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  {/* <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" /> */}
                 </div>
 
                 <div className="p-5">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-bold text-lg text-gray-900">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-bold text-lg text-gray-900 line-clamp-1">
                       {offer?.offerName}
                     </h3>
-                    <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">
-                      {offer?.offerCategory}
+                    <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded-full">
+                      {offer?.offerCategory || "General"}
                     </span>
-                    {/* Offer location */}
-                    {/* <div className="flex items-center text-sm text-gray-500">
-                      <FiMapPin className="mr-1" />
-                      <span>{offer.distance}</span>
-                    </div> */}
                   </div>
-                  {offer?.storeId?.storeName ? (
-                    <div className="flex gap-2 items-center text-gray-600 mb-3 ">
-                      <MdStorefront />
 
-                      <p className="text-sm ">{offer?.storeId?.storeName}</p>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2 items-center text-gray-600 mb-3 ">
-                      <MdStorefront />
-
-                      <p className="text-sm ">By {offer?.storeId?.userName}</p>
-                    </div>
-                  )}
-
-                  {/* <div className="flex items-center justify-between mb-4">
-                    <RatingStars rating={offer.rating} />
-                    <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">
-                      {offer.category}
-                    </span>
-                  </div> */}
+                  <div className="flex items-center text-gray-600 mb-3">
+                    <FaStore className="text-gray-500 mr-2" />
+                    <p className="text-sm">
+                      {offer?.storeId?.storeName ||
+                        offer?.storeId?.userName ||
+                        "Unknown Store"}
+                    </p>
+                  </div>
 
                   <p className="text-gray-700 text-sm line-clamp-2 mb-4">
                     {offer.offerDescription || "Details will be added soon."}
                   </p>
 
-                  {/* <div className="flex items-center text-sm text-gray-500 mb-4">
-                    <FiClock className="mr-2" />
-                    <span>{offer.validity}</span>
-                  </div> */}
                   <div className="flex items-center text-sm text-gray-500 mb-4">
-                    {loading ? (
-                      <div className="w-4 h-4 mr-2">
-                        {/* <Lottie
-                          // animationData={loadingAnimation}
-                          loop
-                          autoplay
-                        /> */}
-                      </div>
-                    ) : (
-                      <FiClock className="mr-2" />
-                    )}
-
+                    <FiClock className="mr-2 text-gray-400" />
                     <span>
-                      {" "}
                       {offer?.offerEndDate
                         ? new Date(offer.offerEndDate).toLocaleDateString()
                         : "N/A"}
                     </span>
                   </div>
 
-                  {offer.isOnline ? (
-                    <a
-                      href={offer.website || "#"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block w-full bg-blue-600 text-white py-2 px-3 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors text-center"
-                    >
-                      <FiGlobe className="inline mr-2" /> Visit Website
-                    </a>
-                  ) : (
+                  <div className="flex flex-col space-y-2">
                     <button
-                      onClick={() =>
-                        offer?.address && handleGetDirections(offer?.address)
+                      disabled={
+                        loadingButtons[offer._id] || alreadyBooked[offer._id]
                       }
-                      className="w-full bg-red-600 text-white py-2 px-3 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors flex items-center justify-center cursor-pointer"
-                      disabled={!offer?.address}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        bookOffer(offer._id);
+                      }}
+                      className={`w-full py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center ${
+                        loadingButtons[offer._id]
+                          ? "bg-gray-300 cursor-not-allowed"
+                          : alreadyBooked[offer._id]
+                          ? "bg-green-600 text-white"
+                          : "bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800"
+                      }`}
                     >
-                      <FiNavigation className="mr-2" /> Get Directions
+                      <FiShoppingCart className="mr-2" />
+                      {loadingButtons[offer._id]
+                        ? "Booking..."
+                        : alreadyBooked[offer._id]
+                        ? "Already Booked"
+                        : "Book Now"}
                     </button>
-                  )}
+
+                    {offer.isOnline ? (
+                      <a
+                        href={offer.website || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full bg-blue-600 text-white py-2 px-3 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors text-center"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <FiGlobe className="inline mr-2" /> Visit Website
+                      </a>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // offer?.address && handleGetDirections(offer?.address);
+                            if (offer?.address) {
+    handleGetDirections(offer.address);
+  }
+                        }}
+                        className="w-full bg-gray-800 text-white py-2 px-3 rounded-lg text-sm font-medium hover:bg-gray-900 transition-colors flex items-center justify-center"
+                        disabled={!offer?.address}
+                      >
+                        <FiNavigation className="mr-2" /> Get Directions
+                      </button>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             ))}
@@ -487,109 +608,140 @@ export default function OffersPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="relative h-56 w-full">
-                <img
-                  src={selectedOffer.offerImage || "/placeholder.jpg"}
-                  alt={selectedOffer.offerName}
+                <Image
+                  src={selectedOffer?.url || "/placeholder.jpg"}
+                  alt={selectedOffer?.offerName || "Offer image"}
+                  fill
                   className="object-cover"
-                  sizes="100vw"
+                  unoptimized={true}
                 />
-                <div className="absolute top-3 right-3 bg-red-600 text-white text-sm font-bold px-3 py-1 rounded">
-                  {selectedOffer.discount}
+                <div className="absolute top-3 right-3 bg-red-600 text-white text-sm font-bold px-3 py-1 rounded-full shadow-md">
+                  {selectedOffer?.offerDiscount || "Offer"}
                 </div>
+                <button
+                  onClick={() => setSelectedOffer(null)}
+                  className="absolute top-3 left-3 bg-white/80 text-gray-800 p-1 rounded-full hover:bg-white"
+                >
+                  <FiX size={20} />
+                </button>
               </div>
 
               <div className="p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  {selectedOffer.offerName}
-                </h2>
-                <p className="text-gray-600 mb-4">
-                  {selectedOffer.businessName}
-                </p>
+                <div className="flex justify-between items-start mb-4">
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {selectedOffer?.offerName}
+                  </h2>
+                  <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded-full">
+                    {selectedOffer?.offerCategory || "General"}
+                  </span>
+                </div>
 
-                <div className="flex items-center justify-between mb-6">
-                  <RatingStars rating={selectedOffer.rating} />
-                  <div className="flex items-center text-sm text-gray-500">
-                    <FiMapPin className="mr-1" />
-                    <span>{selectedOffer.distance}</span>
-                  </div>
+                <div className="flex items-center text-gray-600 mb-6">
+                  <FaStore className="text-gray-500 mr-2" />
+                  <p className="text-sm">
+                    {selectedOffer?.storeId?.storeName ||
+                      selectedOffer?.storeId?.userName ||
+                      "Unknown Store"}
+                  </p>
                 </div>
 
                 <div className="space-y-4 mb-6">
                   <div>
-                    <strong className="text-gray-900">Category:</strong>
-                    <p className="mt-1 text-gray-700">
-                      {selectedOffer.category}
+                    <h3 className="text-sm font-semibold text-gray-500 mb-1">
+                      VALID UNTIL
+                    </h3>
+                    <p className="text-gray-700">
+                      {selectedOffer?.offerEndDate
+                        ? new Date(
+                            selectedOffer.offerEndDate
+                          ).toLocaleDateString()
+                        : "N/A"}
                     </p>
                   </div>
 
                   <div>
-                    <strong className="text-gray-900">Valid Until:</strong>
-                    <p className="mt-1 text-gray-700">
-                      {selectedOffer.validity}
-                    </p>
-                  </div>
-
-                  <div>
-                    <strong className="text-gray-900">Description:</strong>
-                    <p className="mt-1 text-gray-700">
-                      {selectedOffer.offerDescription ||
+                    <h3 className="text-sm font-semibold text-gray-500 mb-1">
+                      DESCRIPTION
+                    </h3>
+                    <p className="text-gray-700">
+                      {selectedOffer?.offerDescription ||
                         "Details will be added soon."}
                     </p>
                   </div>
 
-                  {selectedOffer.isOnline && selectedOffer.website && (
+                  {selectedOffer?.isOnline && selectedOffer?.website && (
                     <div>
-                      <strong className="text-gray-900">Website:</strong>
-                      <p className="mt-1 text-blue-600 break-all">
+                      <h3 className="text-sm font-semibold text-gray-500 mb-1">
+                        WEBSITE
+                      </h3>
+                      <p className="text-blue-600 break-all">
                         <a
-                          href={selectedOffer.website}
+                          href={selectedOffer?.website}
                           target="_blank"
                           rel="noopener noreferrer"
+                          className="hover:underline"
                         >
-                          {selectedOffer.website}
+                          {selectedOffer?.website}
                         </a>
                       </p>
                     </div>
                   )}
 
-                  {!selectedOffer.isOnline && selectedOffer.address && (
+                  {!selectedOffer?.isOnline && selectedOffer?.address && (
                     <div>
-                      <strong className="text-gray-900">Address:</strong>
-                      <p className="mt-1 text-gray-700">
-                        {selectedOffer.address}
-                      </p>
+                      <h3 className="text-sm font-semibold text-gray-500 mb-1">
+                        ADDRESS
+                      </h3>
+                      <p className="text-gray-700">{selectedOffer?.address}</p>
                     </div>
                   )}
                 </div>
 
-                {selectedOffer.isOnline ? (
-                  <a
-                    href={selectedOffer.website || "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full bg-blue-600 text-white py-2 px-3 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors text-center mb-3"
-                  >
-                    <FiGlobe className="inline mr-2" /> Visit Website
-                  </a>
-                ) : (
+                <div className="flex flex-col space-y-3">
                   <button
-                    onClick={() =>
-                      selectedOffer.address &&
-                      handleGetDirections(selectedOffer.address)
+                    disabled={
+                      loadingButtons[selectedOffer._id] ||
+                      alreadyBooked[selectedOffer._id]
                     }
-                    className="w-full bg-red-600 text-white py-2 px-3 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors flex items-center justify-center mb-3"
-                    disabled={!selectedOffer.address}
+                    onClick={() => bookOffer(selectedOffer._id)}
+                    className={`w-full py-3 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center ${
+                      loadingButtons[selectedOffer._id]
+                        ? "bg-gray-300 cursor-not-allowed"
+                        : alreadyBooked[selectedOffer._id]
+                        ? "bg-green-600 text-white"
+                        : "bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800"
+                    }`}
                   >
-                    <FiNavigation className="mr-2" /> Get Directions
+                    <FiShoppingCart className="mr-2" />
+                    {loadingButtons[selectedOffer._id]
+                      ? "Booking..."
+                      : alreadyBooked[selectedOffer._id]
+                      ? "Already Booked"
+                      : "Book This Offer"}
                   </button>
-                )}
 
-                <button
-                  className="w-full bg-gray-200 text-gray-800 py-2 px-3 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
-                  onClick={() => setSelectedOffer(null)}
-                >
-                  Close
-                </button>
+                  {selectedOffer?.isOnline ? (
+                    <a
+                      href={selectedOffer?.website || "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-full bg-blue-600 text-white py-3 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors text-center"
+                    >
+                      <FiGlobe className="inline mr-2" /> Visit Website
+                    </a>
+                  ) : (
+                    <button
+                      onClick={() =>
+                        selectedOffer?.address &&
+                        handleGetDirections(selectedOffer?.address)
+                      }
+                      className="w-full bg-gray-800 text-white py-3 px-4 rounded-lg text-sm font-medium hover:bg-gray-900 transition-colors flex items-center justify-center"
+                      disabled={!selectedOffer?.address}
+                    >
+                      <FiNavigation className="mr-2" /> Get Directions
+                    </button>
+                  )}
+                </div>
               </div>
             </motion.div>
           </motion.div>
