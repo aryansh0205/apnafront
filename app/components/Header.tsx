@@ -80,10 +80,9 @@ const LoginPopup = ({
       const ipRes = await axios.get("https://api.ipify.org?format=json");
       const ipAddress = ipRes.data.ip;
 
-      const res = await axios.post(
-        `http://localhost:5002/api/createGuestUser`,
-        { IPAddress: ipAddress }
-      );
+      const res = await axios.post(`${API}/createGuestUser`, {
+        IPAddress: ipAddress,
+      });
       const newUser = res.data?.data?.userName;
 
       if (newUser) {
@@ -622,8 +621,8 @@ export default function Header() {
               Coming Soon to {selectedCity}!
             </h2>
             <p className="text-gray-600 mb-6">
-              We&apos;re currently only available in Kanpur. We&apos;ll be expanding to
-              your city soon!
+              We&apos;re currently only available in Kanpur. We&apos;ll be
+              expanding to your city soon!
             </p>
             <button
               onClick={handleCityChange}

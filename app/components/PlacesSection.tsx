@@ -263,6 +263,7 @@ import ganga from "../Asset/ganga.jpg";
 import zoo from "../Asset/zoo.jpg"; // renamed for clarity
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { API } from "../utils/helpers";
 
 interface Place {
   id: number;
@@ -376,7 +377,7 @@ export default function KanpurPlaces() {
 
         try {
           const res = await axios.get(
-            `${process.env.NEXT_PUBLIC_API}/getPlaces`,
+            `${API}/getPlaces`,
             {
               params: {
                 city: c, // Use c directly instead of state to avoid async issue

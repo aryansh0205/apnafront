@@ -1105,6 +1105,7 @@ import { FiClock, FiNavigation, FiGlobe, FiArrowRight } from "react-icons/fi";
 // import { FaRegStar, FaStar, FaStarHalfAlt } from "react-icons/fa";
 import { MdStorefront } from "react-icons/md";
 import axios from "axios";
+import { API } from "../utils/helpers";
 
 type Offer = {
   id: number;
@@ -1150,7 +1151,7 @@ export default function OffersSection() {
     const city = localStorage.getItem("selectedCity");
 
     try {
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API}/getOffers`, {
+      const res = await axios.get(`${API}/getOffers`, {
         params: {
           type: "trending",
           city: city,
@@ -1160,7 +1161,7 @@ export default function OffersSection() {
       if (res.data.success) {
         setTrendingOffers(res.data.offers);
       }
-      const resp = await axios.get(`${process.env.NEXT_PUBLIC_API}/getOffers`, {
+      const resp = await axios.get(`${API}/getOffers`, {
         params: {
           type: "hot",
           city: city,

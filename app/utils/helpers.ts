@@ -1,7 +1,7 @@
 import axios from "axios";
 import toast from "react-hot-toast";
 
-export const API = process.env.NEXT_PUBLIC_API;
+export const API = process.env.NEXT_PUBLIC_API || "https://backend.apnacity.in/api";
 
 export const errorHandler = (error: unknown) => {
   if (axios.isAxiosError(error)) {

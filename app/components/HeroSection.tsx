@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import Image from "next/image";
+import { API } from "../utils/helpers";
 
 type Banner = {
   _id: string;
@@ -35,7 +36,7 @@ export default function HeroSection() {
       try {
         if (!city) return;
         setLoading(true);
-        const res = await axios.get(`${process.env.NEXT_PUBLIC_API}/getBanners`, {
+        const res = await axios.get(`${API}/getBanners`, {
           params: { city },
         });
         
