@@ -418,7 +418,7 @@ export default function OffersPage() {
               "No offers found"
             )}
           </h2>
-          {filteredOffers.length > 0 && (
+          {/* {filteredOffers.length > 0 && (
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-500">
                 Showing {filteredOffers.length} of {offers.length}
@@ -430,7 +430,7 @@ export default function OffersPage() {
                 View My Bookings
               </button>
             </div>
-          )}
+          )} */}
         </div>
 
         {loading ? (

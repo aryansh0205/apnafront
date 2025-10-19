@@ -391,7 +391,7 @@ export default function Header() {
               </Link>
 
               <div className="hidden md:flex items-center space-x-4">
-                <div className="relative group">
+                {/* <div className="relative group">
                   <button className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-full font-sans shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 hover:from-yellow-300 hover:to-yellow-400 active:scale-95">
                     <div className="relative">
                       <CoinIcon />
@@ -447,7 +447,7 @@ export default function Header() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </div> */}
                 <div className="relative">
                   <button
                     onClick={toggleCityPopup}

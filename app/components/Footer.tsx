@@ -99,7 +99,7 @@ export default function Footer() {
                       href="tel:+916306760227"
                       className="text-gray-700 hover:text-red-600 transition-colors"
                     >
-                      +91 6306 760 227
+                      +91 92505 91119
                     </a>
                   </div>
                 </li>
